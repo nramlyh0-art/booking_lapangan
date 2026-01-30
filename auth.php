@@ -95,8 +95,6 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(255, 65, 108, 0.3);
         }
-
-        select.form-control option { background: #1a1a1a; color: white; }
     </style>
 </head>
 <body>
@@ -143,13 +141,11 @@
                     <label class="form-label">Buat Password</label>
                     <input type="password" name="password" class="form-control" placeholder="Minimal 6 karakter" required>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Daftar Sebagai</label>
-                    <select name="role" class="form-control">
-                        <option value="user">USER (Penyewa)</option>
-                        <option value="admin">ADMIN (Pengelola)</option>
-                    </select>
-                </div>
+                
+                <p style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-align: center; margin-top: 10px;">
+                    Dengan mendaftar, Anda otomatis bergabung sebagai member Glory Sport.
+                </p>
+
                 <button type="submit" name="register" class="btn-auth">DAFTAR AKUN</button>
             </form>
         </div>

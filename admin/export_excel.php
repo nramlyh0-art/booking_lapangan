@@ -1,52 +1,55 @@
 <?php
-session_start();
 require '../config/database.php';
 
-// Cek akses admin
-if ($_SESSION['role'] != 'admin') exit;
+$tgl_mulai = $_GET['mulai'];
+$tgl_sampai = $_GET['sampai'];
 
-// Ambil parameter tanggal dari URL
-$tgl_awal = $_GET['awal'];
-$tgl_akhir = $_GET['akhir'];
+// Nama file saat didownload
+$filename = "Laporan_GlorySport_" . $tgl_mulai . ".xls";
 
-// Header untuk Excel
 header("Content-type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Laporan_GlorySport_$tgl_awal.xls");
-
-$query = mysqli_query($conn, "SELECT b.*, u.nama_lengkap, l.nama_lapangan 
-                              FROM booking b 
-                              JOIN user u ON b.id_user = u.id_user 
-                              JOIN lapangan l ON b.id_lapangan = l.id_lapangan 
-                              WHERE b.status = 'Lunas' 
-                              AND b.tgl_main BETWEEN '$tgl_awal' AND '$tgl_akhir'");
+header("Content-Disposition: attachment; filename=$filename");
 ?>
 
-<center><h2>LAPORAN PENDAPATAN GLORY SPORT</h2></center>
 <table border="1">
-    <thead>
-        <tr>
-            <th>No</th>
-            <th>Kode Booking</th>
-            <th>Tanggal Main</th>
-            <th>Pelanggan</th>
-            <th>Lapangan</th>
-            <th>Total Bayar</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php $no=1; $total=0; while($row = mysqli_fetch_assoc($query)): ?>
-        <tr>
-            <td><?= $no++ ?></td>
-            <td><?= $row['kode_booking'] ?></td>
-            <td><?= $row['tgl_main'] ?></td>
-            <td><?= $row['nama_lengkap'] ?></td>
-            <td><?= $row['nama_lapangan'] ?></td>
-            <td><?= $row['total_harga'] ?></td>
-        </tr>
-        <?php $total += $row['total_harga']; endwhile; ?>
-        <tr>
-            <th colspan="5">TOTAL PENDAPATAN</th>
-            <th><?= $total ?></th>
-        </tr>
-    </tbody>
+    <tr>
+        <th colspan="5" style="background-color: #000; color: #fff; height: 30px;">
+            LAPORAN PENDAPATAN GLORY SPORT CENTER
+        </th>
+    </tr>
+    <tr>
+        <th colspan="5">Periode: <?= $tgl_mulai ?> s/d <?= $tgl_sampai ?></th>
+    </tr>
+    <tr style="background-color: #e67e22; color: #fff; font-weight: bold;">
+        <th>No</th>
+        <th>Tanggal Main</th>
+        <th>Nama Pelanggan</th>
+        <th>Arena / Lapangan</th>
+        <th>Nominal (Rp)</th>
+    </tr>
+    <?php
+    $no = 1; $total = 0;
+    $sql = "SELECT b.*, u.nama_lengkap, l.nama_lapangan 
+            FROM booking b 
+            JOIN user u ON b.id_user = u.id_user 
+            JOIN lapangan l ON b.id_lapangan = l.id_lapangan 
+            WHERE b.status = 'Lunas' 
+            AND b.tgl_main BETWEEN '$tgl_mulai' AND '$tgl_sampai'";
+    $query = mysqli_query($db, $sql);
+    
+    while($row = mysqli_fetch_array($query)):
+        $total += $row['total_harga'];
+    ?>
+    <tr>
+        <td align="center"><?= $no++; ?></td>
+        <td><?= $row['tgl_main'] ?></td>
+        <td><?= strtoupper($row['nama_lengkap']) ?></td>
+        <td><?= $row['nama_lapangan'] ?></td>
+        <td><?= $row['total_harga'] ?></td>
+    </tr>
+    <?php endwhile; ?>
+    <tr style="background-color: #eee; font-weight: bold;">
+        <td colspan="4" align="right">GRAND TOTAL</td>
+        <td><?= $total ?></td>
+    </tr>
 </table>

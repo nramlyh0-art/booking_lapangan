@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 30 Jan 2026 pada 10.05
+-- Waktu pembuatan: 05 Feb 2026 pada 19.33
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.2.12
 
@@ -20,6 +20,27 @@ SET time_zone = "+00:00";
 --
 -- Database: `booking_lapangan`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `admin`
+--
+
+CREATE TABLE `admin` (
+  `id_admin` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('admin') DEFAULT 'admin'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `admin`
+--
+
+INSERT INTO `admin` (`id_admin`, `username`, `email`, `password`, `role`) VALUES
+(4, 'admin_glory', 'adminglory@gmail.com', '$2y$10$PnExqGFHX0AzhIRj6AXV8eM0wKnNFXd3N3qr6.Zsveu8UdSvr0uEi', 'admin');
 
 -- --------------------------------------------------------
 
@@ -47,12 +68,14 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`id_booking`, `id_user`, `id_lapangan`, `kode_booking`, `tgl_booking`, `tgl_main`, `jam_mulai`, `jam_selesai`, `durasi`, `total_harga`, `bukti_bayar`, `status`) VALUES
-(2, 2, 3, 'GLRY-4A890', '2026-01-29 20:55:53', '2026-01-30', '12:00:00', '14:00:00', 2, 270000, 'BUKTI-GLRY-4A890.jpg', 'Lunas'),
-(3, 2, 3, 'GLRY-3FEB5', '2026-01-29 21:10:04', '2026-01-30', '10:00:00', '11:00:00', 1, 135000, 'BUKTI-GLRY-3FEB5.jpg', 'Lunas'),
-(4, 2, 2, 'GLRY-B3013', '2026-01-29 21:25:13', '2026-01-30', '04:26:00', '05:26:00', 1, 50000, 'BUKTI-GLRY-B3013.jpg', 'Lunas'),
-(5, 2, 2, 'GLRY-71612', '2026-01-29 22:50:53', '2026-01-30', '11:00:00', '12:00:00', 1, 50000, 'BUKTI-GLRY-71612.jpg', 'Lunas'),
-(11, 2, 1, 'GLRY-20260130-2185', '2026-01-30 09:08:07', '2026-01-30', '11:00:00', '12:00:00', 1, 150000, 'BUKTI-GLRY-20260130-2185.jpg', 'Lunas'),
-(12, 2, 3, 'GLRY-20260130-4A24', '2026-01-30 09:20:03', '2026-01-30', '23:00:00', '01:00:00', 2, 270000, 'BUKTI-GLRY-20260130-4A24.jpg', 'Lunas');
+(14, 2, 3, 'GLRY-20260205-7B76', '2026-02-05 17:24:43', '2026-02-06', '09:00:00', '11:00:00', 2, 270000, 'BUKTI-GLRY-20260205-7B76.jpg', 'Lunas'),
+(15, 2, 2, 'GLRY-20260205-035A', '2026-02-05 17:43:05', '2026-02-06', '12:00:00', '13:00:00', 1, 50000, 'BUKTI-GLRY-20260205-035A.jpg', 'Lunas'),
+(16, 2, 1, 'GLRY-20260205-EF2A', '2026-02-05 17:44:36', '2026-02-06', '20:00:00', '21:00:00', 1, 150000, 'BUKTI-GLRY-20260205-EF2A.jpg', 'Lunas'),
+(17, 2, 2, 'GLRY-20260205-3B54', '2026-02-05 18:01:26', '2026-02-06', '13:00:00', '14:00:00', 1, 50000, 'BUKTI-GLRY-20260205-3B54.jpg', 'Lunas'),
+(18, 2, 3, 'GLRY-20260205-F27F', '2026-02-05 18:05:26', '2026-02-06', '21:00:00', '22:00:00', 1, 135000, 'BUKTI-GLRY-20260205-F27F.jpg', 'Lunas'),
+(19, 2, 2, 'GLRY-20260205-BA06', '2026-02-05 18:53:35', '2026-02-06', '22:00:00', '23:00:00', 1, 50000, 'BUKTI_19_1770314632.jpg', 'Lunas'),
+(20, 2, 3, 'GLRY-20260205-51C7', '2026-02-05 19:05:39', '2026-02-06', '03:00:00', '04:00:00', 1, 135000, 'BUKTI_20_1770315128.jpg', 'Lunas'),
+(21, 2, 1, 'GLRY-20260205-8725', '2026-02-05 19:13:36', '2026-02-06', '22:00:00', '23:00:00', 1, 150000, NULL, '');
 
 -- --------------------------------------------------------
 
@@ -97,12 +120,17 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id_user`, `nama_lengkap`, `username`, `email`, `no_hp`, `password`, `role`) VALUES
-(2, 'nramlyh', 'amel', 'nramlyh0@gmail.com', '081389841710', '$2y$10$k8igVSudZ3v2ZdSRuBwN4OmCoAAtfIT98uCPaGyH7WqSMqAhcUNGy', 'user'),
-(5, 'admincenter', 'admincenter', 'admincenter@gmail.com', '089509935256', '$2y$10$coMSkCblRt6up7P3jI6AXumzXvM7CSdnwJGf.85V1k5PsrUKVRMbO', 'admin');
+(2, 'nramlyh', 'amel', 'nramlyh0@gmail.com', '081389841710', '$2y$10$k8igVSudZ3v2ZdSRuBwN4OmCoAAtfIT98uCPaGyH7WqSMqAhcUNGy', 'user');
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indeks untuk tabel `admin`
+--
+ALTER TABLE `admin`
+  ADD PRIMARY KEY (`id_admin`);
 
 --
 -- Indeks untuk tabel `booking`
@@ -131,10 +159,16 @@ ALTER TABLE `user`
 --
 
 --
+-- AUTO_INCREMENT untuk tabel `admin`
+--
+ALTER TABLE `admin`
+  MODIFY `id_admin` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT untuk tabel `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `id_booking` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id_booking` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT untuk tabel `lapangan`

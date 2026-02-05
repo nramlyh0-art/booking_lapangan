@@ -1,34 +1,27 @@
 <?php
 session_start();
-require_once '../config/database.php';
+require '../config/database.php';
 
+// 1. Proteksi Admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../auth.php");
-    exit;
+    header("Location: login_admin.php");
+    exit();
 }
 
-// 1. Filter Tanggal (Default: Bulan Berjalan)
-$tgl_mulai = $_GET['tgl_mulai'] ?? date('Y-m-01'); 
-$tgl_selesai = $_GET['tgl_selesai'] ?? date('Y-m-d');
+// 2. Filter Tanggal
+$tgl_mulai = isset($_POST['tgl_mulai']) ? $_POST['tgl_mulai'] : date('Y-m-01');
+$tgl_sampai = isset($_POST['tgl_sampai']) ? $_POST['tgl_sampai'] : date('Y-m-d');
 
-// 2. Query Data Lunas
-$query_str = "SELECT booking.*, user.nama_lengkap 
-              FROM booking 
-              JOIN user ON booking.id_user = user.id_user 
-              WHERE booking.status = 'Lunas' 
-              AND booking.tgl_booking BETWEEN '$tgl_mulai 00:00:00' AND '$tgl_selesai 23:59:59'
-              ORDER BY booking.tgl_booking DESC";
-
-$sql = mysqli_query($db, $query_str);
-
-$total_pendapatan = 0;
-$total_pesanan = mysqli_num_rows($sql);
-$data_laporan = [];
-
-while($row = mysqli_fetch_assoc($sql)) {
-    $total_pendapatan += $row['total_harga'];
-    $data_laporan[] = $row;
-}
+// 3. Query Ringkasan Statistik
+$query_stats = mysqli_query($db, "SELECT 
+    SUM(total_harga) as total_pendapatan, 
+    COUNT(*) as total_transaksi 
+    FROM booking 
+    WHERE status = 'Lunas' 
+    AND tgl_main BETWEEN '$tgl_mulai' AND '$tgl_sampai'");
+$stats = mysqli_fetch_assoc($query_stats);
+$pendapatan = $stats['total_pendapatan'] ?? 0;
+$transaksi = $stats['total_transaksi'] ?? 0;
 ?>
 
 <!DOCTYPE html>
@@ -36,205 +29,252 @@ while($row = mysqli_fetch_assoc($sql)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Keuangan | GLORY ADMIN</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Laporan Keuangan | GLORY SPORT</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         :root { 
-            --neon-blue: #00d2ff; 
-            --dark-grey: #1a1a1a;
-            --pure-black: #000000;
-            --bg-black: #0a0a0a;
+            --glory-orange: #e67e22; 
+            --dark-side: #000000;
         }
-
-        body {
-            font-family: 'Montserrat', sans-serif;
-            background: var(--bg-black);
-            color: #ffffff;
+        
+        body { 
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                        url('../assets/img/bg-stadium.jpg'); 
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            color: white; 
+            font-family: 'Montserrat', sans-serif; 
             min-height: 100vh;
             margin: 0;
         }
-
-        /* SIDEBAR & LAYOUT */
-        .sidebar { width: 260px; height: 100vh; position: fixed; background: #000; padding: 30px 20px; border-right: 1px solid rgba(0,210,255,0.1); z-index: 100; transition: 0.3s; }
-        .main-content { margin-left: 260px; padding: 40px; transition: 0.3s; }
         
-        .nav-link { color: rgba(255,255,255,0.5); padding: 12px; display: block; text-decoration: none; font-weight: 600; transition: 0.3s; }
-        .nav-link.active { color: var(--neon-blue); background: rgba(0,210,255,0.1); border-radius: 10px; }
-
-        /* COMPONENTS */
-        .stat-box {
-            background: linear-gradient(135deg, #0056b3, #00d2ff);
-            border-radius: 15px; padding: 25px; border: none;
-            box-shadow: 0 8px 20px rgba(0, 210, 255, 0.2);
+        /* Sidebar */
+        .sidebar { 
+            background: var(--dark-side); 
+            min-height: 100vh; 
+            padding: 30px 20px; 
+            border-right: 1px solid #222; 
+            position: fixed; 
+            width: 250px; 
+            z-index: 1000;
         }
-        .filter-box { background: var(--dark-grey); border-radius: 15px; padding: 20px; border: 1px solid #333; }
-
-        /* TABLE STYLES */
-        .report-card { background: #ffffff; border-radius: 15px; overflow: hidden; border: none; }
-        .table { margin-bottom: 0; background: #ffffff !important; width: 100%; }
         
-        /* Table Header */
-        .table thead { background: var(--pure-black) !important; }
-        .table thead th { 
-            background: var(--pure-black) !important;
-            color: var(--neon-blue); 
-            text-transform: uppercase; 
-            font-size: 11px; 
+        .sidebar-brand {
+            color: var(--glory-orange);
+            font-weight: 800;
+            font-size: 22px;
             letter-spacing: 1px;
-            font-weight: 800;
-            padding: 18px 15px;
-            border: none;
+            margin-bottom: 40px;
+            display: block;
+            text-decoration: none;
+            text-align: center;
         }
 
-        /* Table Body */
-        .table tbody tr { border-bottom: 1px solid #eee; }
-        .table td { padding: 15px; vertical-align: middle; color: #444; font-size: 14px; border: none; }
+        .nav-link { 
+            color: #888; 
+            padding: 12px 18px; 
+            border-radius: 10px; 
+            margin-bottom: 8px; 
+            text-decoration: none; 
+            display: flex;
+            align-items: center;
+            transition: 0.3s; 
+            font-weight: 600;
+        }
         
-        /* NAMA PELANGGAN HITAM PEKAT */
-        .text-pelanggan-hitam {
-            color: #000000 !important;
-            font-weight: 800;
-            font-size: 15px;
+        .nav-link i { margin-right: 12px; width: 20px; }
+        
+        .nav-link:hover, .nav-link.active { 
+            background: var(--glory-orange); 
+            color: white !important; 
+        }
+        
+        /* Main Content */
+        .main-content { padding: 40px; margin-left: 250px; }
+        
+        .header-title { font-weight: 800; font-size: 28px; }
+        .text-orange { color: var(--glory-orange) !important; }
+
+        /* Stats Cards */
+        .stat-card {
+            background: linear-gradient(135deg, var(--glory-orange), #d35400);
+            border-radius: 15px;
+            padding: 20px;
+            border: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
 
-        .kode-badge { background: #000; color: #fff; padding: 5px 8px; border-radius: 4px; font-weight: 700; font-family: monospace; font-size: 12px; }
-        .form-control { background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 8px; }
+        /* Filter Section */
+        .filter-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
 
-        /* RESPONSIVE (MOBILE) */
+        .form-control-dark {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .form-control-dark:focus {
+            background: rgba(0,0,0,0.7);
+            border-color: var(--glory-orange);
+            color: white;
+            box-shadow: none;
+        }
+
+        /* Table Card - Putih agar Teks Hitam Tajam */
+        .card-table { 
+            background: rgba(255, 255, 255, 0.95); 
+            border-radius: 20px; 
+            border: none; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            overflow: hidden; 
+            color: #000;
+        }
+        
+        .table { margin-bottom: 0; vertical-align: middle; color: #000; }
+        .table thead { background: #f1f1f1; }
+        .table th { 
+            color: #555; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            padding: 15px 20px; 
+            border: none;
+            letter-spacing: 1px;
+        }
+        
+        /* Nama & Nominal Hitam sesuai permintaan */
+        .text-black-bold { color: #000000 !important; font-weight: 700; }
+        
+        .table td { padding: 15px 20px; border-top: 1px solid #eee; }
+
+        .btn-export {
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            transition: 0.3s;
+        }
+
         @media (max-width: 992px) {
-            .sidebar { transform: translateX(-100%); width: 0; padding: 0; }
-            .main-content { margin-left: 0; padding: 20px; }
-            .stat-box h2 { font-size: 1.4rem; }
-            .table-responsive { border-radius: 10px; }
-            .table td, .table th { padding: 12px !important; font-size: 13px !important; }
-        }
-
-        /* PDF / PRINT OPTIMIZATION */
-        @media print {
-            @page { size: portrait; margin: 1cm; }
-            .sidebar, .btn-action, .filter-box, .nav-link, button { display: none !important; }
-            .main-content { margin-left: 0 !important; padding: 0 !important; }
-            body { background: white !important; color: black !important; }
-            .report-card { border: 1px solid #eee; border-radius: 0; }
-            .stat-box { 
-                background: #f8f9fa !important; 
-                border: 1px solid #ddd !important; 
-                color: black !important; 
-                box-shadow: none !important;
-            }
-            .stat-box p, .stat-box h2 { color: black !important; }
-            .table thead th { 
-                background: #000 !important; 
-                color: #fff !important; 
-                -webkit-print-color-adjust: exact; 
-            }
-            .text-pelanggan-hitam { color: #000 !important; }
+            .sidebar { width: 80px; }
+            .sidebar-brand, .nav-text { display: none; }
+            .main-content { margin-left: 80px; }
         }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h4 class="fw-800 mb-5 text-center" style="color: var(--neon-blue); letter-spacing: 2px;">GLORY ADMIN</h4>
-    <a href="dashboard.php" class="nav-link">DASHBOARD</a>
-    <a href="konfirmasi.php" class="nav-link">KONFIRMASI</a>
-    <a href="laporan.php" class="nav-link active">LAPORAN</a>
-    <a href="../logout.php" class="nav-link text-danger mt-5"><i class="fas fa-power-off me-2"></i> LOGOUT</a>
-</div>
+<aside class="sidebar shadow">
+    <a href="dashboard.php" class="sidebar-brand">GLORY</a>
+    <nav>
+        <a class="nav-link" href="dashboard.php"><i class="fas fa-th-large"></i> <span class="nav-text">Dashboard</span></a>
+        <a class="nav-link" href="konfirmasi.php"><i class="fas fa-receipt"></i> <span class="nav-text">Konfirmasi</span></a>
+        <a class="nav-link active" href="laporan.php"><i class="fas fa-chart-bar"></i> <span class="nav-text">Laporan</span></a>
+        <div style="margin-top: 50px;">
+            <a class="nav-link text-danger" href="../logout.php"><i class="fas fa-power-off"></i> <span class="nav-text">Logout</span></a>
+        </div>
+    </nav>
+</aside>
 
-<div class="main-content">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<main class="main-content">
+    <div class="d-flex justify-content-between align-items-end mb-4">
         <div>
-            <h1 class="fw-800 text-uppercase mb-1 fs-3">LAPORAN <span style="color: var(--neon-blue);">KEUANGAN</span></h1>
-            <p class="text-secondary fw-600 mb-0 small">Periode: <?= date('d M Y', strtotime($tgl_mulai)) ?> — <?= date('d M Y', strtotime($tgl_selesai)) ?></p>
+            <h2 class="header-title">LAPORAN <span class="text-orange">KEUANGAN</span></h2>
+            <p class="text-secondary mb-0">Periode: <?= date('d M Y', strtotime($tgl_mulai)) ?> — <?= date('d M Y', strtotime($tgl_sampai)) ?></p>
         </div>
-        <div class="d-flex gap-2 btn-action">
-            <button onclick="window.print()" class="btn btn-outline-info px-4 fw-700"><i class="fas fa-file-pdf me-2"></i>PDF</button>
-            <button onclick="exportExcel()" class="btn btn-success px-4 fw-700"><i class="fas fa-file-excel me-2"></i>EXCEL</button>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-md-6">
-            <div class="stat-box">
-                <p class="small text-uppercase fw-800 mb-1" style="color: rgba(255,255,255,0.8);">Total Pendapatan</p>
-                <h2 class="fw-800 mb-0">Rp <?= number_format($total_pendapatan, 0, ',', '.') ?></h2>
-            </div>
-        </div>
-        <div class="col-12 col-md-6">
-            <div class="filter-box h-100 d-flex flex-column justify-content-center">
-                <p class="small text-uppercase fw-800 mb-1 text-secondary">Total Transaksi</p>
-                <h2 class="fw-800 mb-0" style="color: var(--neon-blue);"><?= $total_pesanan ?> <span class="fs-6">Pesanan Lunas</span></h2>
-            </div>
+        <div class="d-flex gap-2">
+            <a href="export_pdf.php?mulai=<?= $tgl_mulai ?>&sampai=<?= $tgl_sampai ?>" class="btn btn-outline-light btn-export"><i class="fas fa-file-pdf me-2"></i>PDF</a>
+            <a href="export_excel.php?mulai=<?= $tgl_mulai ?>&sampai=<?= $tgl_sampai ?>" class="btn btn-success btn-export"><i class="fas fa-file-excel me-2"></i>EXCEL</a>
         </div>
     </div>
 
-    <div class="filter-box mb-4 btn-action">
-        <form method="GET" class="row g-3 align-items-end">
-            <div class="col-6 col-md-4">
-                <label class="small fw-700 mb-2 text-secondary">DARI TANGGAL</label>
-                <input type="date" name="tgl_mulai" class="form-control" value="<?= $tgl_mulai ?>">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="stat-card">
+                <small class="text-uppercase fw-bold opacity-75">Total Pendapatan (Lunas)</small>
+                <h1 class="fw-800 mb-0">Rp <?= number_format($pendapatan, 0, ',', '.') ?></h1>
             </div>
-            <div class="col-6 col-md-4">
-                <label class="small fw-700 mb-2 text-secondary">SAMPAI TANGGAL</label>
-                <input type="date" name="tgl_selesai" class="form-control" value="<?= $tgl_selesai ?>">
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                <small class="text-uppercase fw-bold opacity-75">Total Transaksi</small>
+                <h1 class="fw-800 mb-0"><?= $transaksi ?> <small style="font-size: 15px;">Pesanan</small></h1>
             </div>
-            <div class="col-12 col-md-4">
-                <button type="submit" class="btn btn-info w-100 py-2 fw-800 text-uppercase" style="background: var(--neon-blue); color: #000; border: none;">Terapkan Filter</button>
+        </div>
+    </div>
+
+    <div class="filter-box">
+        <form method="POST" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="small fw-bold mb-2 text-secondary">DARI TANGGAL</label>
+                <input type="date" name="tgl_mulai" class="form-control form-control-dark" value="<?= $tgl_mulai ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="small fw-bold mb-2 text-secondary">SAMPAI TANGGAL</label>
+                <input type="date" name="tgl_sampai" class="form-control form-control-dark" value="<?= $tgl_sampai ?>">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-orange w-100 fw-bold" style="background: var(--glory-orange); color: white; padding: 10px; border-radius: 8px;">
+                    <i class="fas fa-filter me-2"></i>TERAPKAN FILTER
+                </button>
             </div>
         </form>
     </div>
 
-    <div class="report-card shadow-sm">
+    <div class="card card-table shadow-lg">
         <div class="table-responsive">
-            <table class="table" id="tableLaporan">
+            <table class="table">
                 <thead>
                     <tr>
-                        <th>TGL</th>
-                        <th>KODE</th>
-                        <th>NAMA PELANGGAN</th>
-                        <th>WAKTU</th>
-                        <th class="text-end">NOMINAL</th>
+                        <th>Tgl Main</th>
+                        <th>Kode</th>
+                        <th>Nama Pelanggan</th>
+                        <th>Arena</th>
+                        <th class="text-end">Nominal</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if($total_pesanan > 0): ?>
-                        <?php foreach($data_laporan as $row): ?>
-                        <tr>
-                            <td class="fw-600 text-secondary"><?= date('d/m/y', strtotime($row['tgl_booking'])) ?></td>
-                            <td><span class="kode-badge">#<?= $row['id_booking'] ?></span></td>
-                            <td class="text-pelanggan-hitam"><?= strtoupper($row['nama_lengkap']) ?></td>
-                            <td>
-                                <span class="badge bg-dark">
-                                    <?= substr($row['jam_mulai'],0,5) ?> - <?= substr($row['jam_selesai'],0,5) ?>
-                                </span>
-                            </td>
-                            <td class="text-end fw-800" style="color: #000;">Rp <?= number_format($row['total_harga'], 0, ',', '.') ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">Belum ada data pada periode ini.</td>
-                        </tr>
-                    <?php endif; ?>
+                    <?php
+                    $sql = "SELECT b.*, u.nama_lengkap, l.nama_lapangan 
+                            FROM booking b
+                            JOIN user u ON b.id_user = u.id_user 
+                            JOIN lapangan l ON b.id_lapangan = l.id_lapangan 
+                            WHERE b.status = 'Lunas' 
+                            AND b.tgl_main BETWEEN '$tgl_mulai' AND '$tgl_sampai'
+                            ORDER BY b.tgl_main DESC";
+                    $result = mysqli_query($db, $sql);
+
+                    if(mysqli_num_rows($result) > 0) {
+                        while ($row = mysqli_fetch_assoc($result)) {
+                    ?>
+                    <tr>
+                        <td class="small fw-bold text-secondary"><?= date('d/m/Y', strtotime($row['tgl_main'])) ?></td>
+                        <td class="small text-secondary fw-bold">#<?= $row['id_booking'] ?></td>
+                        <td class="text-black-bold text-uppercase"><?= $row['nama_lengkap'] ?></td>
+                        <td class="small fw-bold" style="color: var(--glory-orange);"><?= $row['nama_lapangan'] ?></td>
+                        <td class="text-end text-black-bold">Rp <?= number_format($row['total_harga'], 0, ',', '.') ?></td>
+                    </tr>
+                    <?php 
+                        } 
+                    } else {
+                        echo "<tr><td colspan='5' class='text-center py-5 text-secondary'>Belum ada data pada periode ini.</td></tr>";
+                    }
+                    ?>
                 </tbody>
             </table>
         </div>
     </div>
-</div>
+</main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-    function exportExcel() {
-        var table = document.getElementById("tableLaporan");
-        var wb = XLSX.utils.table_to_book(table, {sheet: "Laporan_Keuangan"});
-        XLSX.writeFile(wb, "Laporan_Glory_<?= date('dmY') ?>.xlsx");
-    }
-</script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
